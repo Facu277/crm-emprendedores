@@ -1,0 +1,20 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+
+# Ignorar carpetas de dependencias
+**/node_modules/
+**/target/
+
+# Ignorar archivos de configuración de editores
+.idea/
+.vscode/
+*.iml
+
+# Ignorar archivos de compilación
+**/dist/
+**/*.class
+
+# Ignorar variables de entorno (Seguridad)
+**/.env
+**/.env.local
