@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // La URL base de tu Backend de Spring Boot
-const API_URL = 'http://localhost:8080/api/v1/auth';
+const API_URL = import.meta.env.VITE_API_URL;
 
 export const login = async (username, password) => {
     try {

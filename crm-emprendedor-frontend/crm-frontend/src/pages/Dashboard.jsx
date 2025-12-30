@@ -45,9 +45,10 @@ const getRolStyles = (rol) => {
 };
 
 const rolEstilo = getRolStyles(user?.rol);
+const API_BASE = import.meta.env.VITE_API_URL.replace('/api/v1', '');
 
 const fotoUrl = emprendedor?.fotoPerfil 
-  ? `http://localhost:8080/uploads/emprendedores/${emprendedor.fotoPerfil}` 
+  ? `${API_BASE}/uploads/emprendedores/${emprendedor.fotoPerfil}` 
   : null;
 
   const nombreAMostrar = emprendedor?.nombre || user?.username || 'Emprendedor';

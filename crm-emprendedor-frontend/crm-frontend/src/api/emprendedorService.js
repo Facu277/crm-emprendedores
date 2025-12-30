@@ -1,7 +1,7 @@
 import api from './axiosConfig';
 
 
-const API_URL = 'http://localhost:8080/api/v1/emprendedores';
+const API_URL = '/emprendedores';
 
 export const registrarEmprendedor = async (datos, fotoFile) => {
     const formData = new FormData();
