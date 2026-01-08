@@ -5,6 +5,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * DTO para el registro de nuevos usuarios en la plataforma.
+ */
 @Data
 @Builder
 @AllArgsConstructor
@@ -12,6 +15,11 @@ import lombok.NoArgsConstructor;
 public class RegisterRequest {
     private String username;
     private String password;
-    private Long emprendedorId; // Para vincular al usuario con su negocio
-    private Long rolId;
+    
+    /** * ID del negocio al que pertenece este usuario. 
+     * Fundamental para el aislamiento de datos. 
+     */
+    private Long emprendedorId; 
+    
+    private Long rolId; // Define el nivel de acceso (ADMIN, EMPRENDEDOR, EMPLEADO)
 }

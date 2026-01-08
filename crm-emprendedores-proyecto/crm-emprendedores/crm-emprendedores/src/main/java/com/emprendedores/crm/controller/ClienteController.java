@@ -14,16 +14,29 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Controlador REST para la gestión de la cartera de clientes de un emprendedor.
+ * <p>
+ * Este componente implementa un modelo de seguridad estricto donde cada operación
+ * requiere que el usuario posea el rol 'EMPRENDEDOR'. El aislamiento de datos se
+ * garantiza recuperando el ID del emprendedor directamente desde el contexto de 
+ * seguridad de Spring, evitando manipulaciones externas.
+ * </p>
+ * @author Facundo Alfaro
+ * @version 1.0
+ */
 @RestController
-@RequestMapping("/api/v1/clientes") // URL estándar v1
+@RequestMapping("/api/v1/clientes")
 @RequiredArgsConstructor
 public class ClienteController {
 
     private final ClienteService clienteService;
 
     /**
-     * Crear un Cliente.
-     * El ID del emprendedor se toma automáticamente del usuario autenticado (@AuthenticationPrincipal).
+     * Registra un nuevo cliente asociado al emprendedor autenticado.
+     * @param user Usuario autenticado inyectado desde el contexto de seguridad.
+     * @param dto Datos del cliente (nombre, contacto, etc.).
+     * @return ResponseEntity con el cliente persistido y estado 201 (CREATED).
      */
     @PostMapping
     @PreAuthorize("hasRole('EMPRENDEDOR')")
@@ -34,7 +47,9 @@ public class ClienteController {
     }
 
     /**
-     * Obtener todos los clientes del emprendedor logueado.
+     * Recupera el listado completo de clientes pertenecientes únicamente al emprendedor actual.
+     * @param user Usuario autenticado.
+     * @return Lista de clientes registrados por el emprendedor.
      */
     @GetMapping
     @PreAuthorize("hasRole('EMPRENDEDOR')")
@@ -43,42 +58,50 @@ public class ClienteController {
     }
 
     /**
-     * Obtener un cliente específico validando propiedad.
+     * Busca un cliente específico por su ID, validando que pertenezca a la cuenta del solicitante.
+     * @param id Identificador único del cliente.
+     * @param user Usuario autenticado para validación de propiedad.
+     * @return DTO del cliente encontrado.
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('EMPRENDEDOR')")
     public ResponseEntity<ClienteResponseDTO> getClienteById(
             @PathVariable Long id,
             @AuthenticationPrincipal User user) {
-
         ClienteResponseDTO cliente = clienteService.findByIdAndEmprendedorId(id, user.getEmprendedor().getId());
         return ResponseEntity.ok(cliente);
     }
 
     /**
-     * Eliminar un cliente asegurando pertenencia.
+     * Actualiza los datos de un cliente existente.
+     * <p>El servicio verifica que el cliente realmente pertenezca al emprendedor antes de aplicar cambios.</p>
+     * @param id ID del cliente a modificar.
+     * @param user Usuario autenticado.
+     * @param dto Nuevos datos del cliente.
+     * @return Cliente actualizado con estado 200 (OK).
      */
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('EMPRENDEDOR')") // El service ya valida que le pertenezca
-    public ResponseEntity<Void> deleteCliente(
-            @PathVariable Long id,
-            @AuthenticationPrincipal User user) {
-        clienteService.delete(id, user.getEmprendedor().getId());
-        return ResponseEntity.noContent().build();
-    }
-
-
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('EMPRENDEDOR')")
     public ResponseEntity<ClienteResponseDTO> updateCliente(
             @PathVariable Long id,
             @AuthenticationPrincipal User user,
             @RequestBody @Valid ClienteCreateUpdateDTO dto) {
-
-        // El service debe recibir el ID del cliente, el DTO con nuevos datos
-        // y el ID del emprendedor para validar que sea suyo.
         ClienteResponseDTO actualizado = clienteService.update(id, dto, user.getEmprendedor().getId());
         return ResponseEntity.ok(actualizado);
     }
-}
 
+    /**
+     * Elimina un cliente de la base de datos de forma lógica o física según la implementación del servicio.
+     * @param id ID del cliente a eliminar.
+     * @param user Usuario autenticado.
+     * @return Respuesta vacía con estado 204 (NO_CONTENT).
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('EMPRENDEDOR')")
+    public ResponseEntity<Void> deleteCliente(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user) {
+        clienteService.delete(id, user.getEmprendedor().getId());
+        return ResponseEntity.noContent().build();
+    }
+}

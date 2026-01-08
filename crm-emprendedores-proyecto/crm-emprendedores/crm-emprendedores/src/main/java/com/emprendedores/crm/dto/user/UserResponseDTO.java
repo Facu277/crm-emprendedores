@@ -8,7 +8,7 @@ import lombok.Data;
 @Builder
 public class UserResponseDTO {
     private Long id;
-    private String nombre; // Para mostrar en el perfil
+    private String nombre; 
     private String email;
     private String rol;
     private EmprendedorResponseDTO emprendedor;

@@ -10,26 +10,57 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Repositorio para la gestión de persistencia de la entidad {@link Venta}.
+ * <p>
+ * Centraliza las operaciones transaccionales y de reporte financiero del sistema, 
+ * asegurando el aislamiento de datos por emprendedor (Multi-Tenancy).
+ * </p>
+ * @author Facundo Alfaro
+ * @version 1.0
+ */
 @Repository
 public interface VentaRepository extends JpaRepository<Venta, Long> {
 
-    // Obtener ventas asociadas a un emprendedor (Aislamiento Multi-Tenant)
+    /**
+     * Recupera todas las ventas pertenecientes a un emprendedor.
+     * @param emprendedorId Identificador del emprendedor propietario.
+     * @return Lista completa de ventas del emprendedor.
+     */
     List<Venta> findByEmprendedorId(Long emprendedorId);
 
-    // Obtener ventas asociadas a un cliente específico (Dentro de un emprendedor)
+    /**
+     * Filtra las ventas por cliente, garantizando que pertenezcan al emprendedor autenticado.
+     * @param clienteId ID del cliente.
+     * @param emprendedorId ID del emprendedor propietario.
+     * @return Lista de ventas realizadas al cliente específico dentro del contexto del emprendedor.
+     */
     List<Venta> findByClienteIdAndEmprendedorId(Long clienteId, Long emprendedorId);
 
-    // Cuenta ventas de un emprendedor desde una fecha específica
+    /**
+     * Cuenta el volumen de ventas realizadas desde una fecha determinada (ej. inicio de mes).
+     * @param id ID del emprendedor.
+     * @param inicio Fecha de corte para el conteo.
+     * @return Cantidad total de ventas en el periodo.
+     */
     @Query("SELECT COUNT(v) FROM Venta v WHERE v.emprendedor.id = :id AND v.fecha >= :inicio")
-    long countVentasDelMes(Long id, LocalDateTime inicio);
+    long countVentasDelMes(@Param("id") Long id, @Param("inicio") LocalDateTime inicio);
 
-    // Suma el monto de las ventas de un emprendedor desde una fecha específica
+    /**
+     * Calcula los ingresos totales (suma de montos) generados por un emprendedor en un periodo.
+     * @param id ID del emprendedor.
+     * @param inicio Fecha de corte para la sumatoria.
+     * @return {@link BigDecimal} con el total de ingresos.
+     */
     @Query("SELECT SUM(v.monto) FROM Venta v WHERE v.emprendedor.id = :id AND v.fecha >= :inicio")
-    BigDecimal sumIngresosDelMes(Long id, LocalDateTime inicio);
+    BigDecimal sumIngresosDelMes(@Param("id") Long id, @Param("inicio") LocalDateTime inicio);
 
-    // Para la lista de actividad reciente
+    /**
+     * Obtiene las últimas 5 ventas registradas, ordenadas de forma cronológica descendente.
+     * Utilizado para dashboards y listas de actividad reciente.
+     * @param emprendedorId ID del emprendedor propietario.
+     * @return Lista de las 5 ventas más recientes.
+     */
     List<Venta> findTop5ByEmprendedorIdOrderByFechaDesc(Long emprendedorId);
-        
-
 }
 

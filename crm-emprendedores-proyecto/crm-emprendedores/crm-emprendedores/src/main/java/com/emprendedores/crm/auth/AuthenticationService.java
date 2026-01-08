@@ -1,15 +1,10 @@
 package com.emprendedores.crm.auth;
 
-
 import com.emprendedores.crm.dto.user.UserResponseDTO;
 import com.emprendedores.crm.model.User;
 import com.emprendedores.crm.model.Token;
 import com.emprendedores.crm.model.TokenType;
 import com.emprendedores.crm.dto.emprendedor.EmprendedorResponseDTO;
-import com.emprendedores.crm.model.Rol;
-import com.emprendedores.crm.model.Emprendedor;
-// IMPORTS DIRECTOS (No uses *)
-
 import com.emprendedores.crm.config.JwtService;
 import com.emprendedores.crm.repository.EmprendedorRepository;
 import com.emprendedores.crm.repository.RolRepository;
@@ -22,12 +17,20 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
+/**
+ * Servicio encargado de la orquestación de seguridad, autenticación y registro.
+ * <p>
+ * Gestiona el flujo de creación de usuarios, la validación de credenciales mediante 
+ * {@link AuthenticationManager} y el control de persistencia de tokens (Whitelist) 
+ * para permitir el cierre de sesión y la invalidación de sesiones previas.
+ * </p>
+ * @author Facundo Alfaro
+ * @version 1.0
+ */
 @Service
 @RequiredArgsConstructor
 public class AuthenticationService {
-    // CAMBIO: De UsuarioRepository a UserRepository
+
     private final UserRepository repository;
     private final TokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
@@ -36,13 +39,21 @@ public class AuthenticationService {
     private final RolRepository rolRepository;
     private final EmprendedorRepository emprendedorRepository;
 
+    /**
+     * Registra un nuevo usuario vinculándolo a un rol y a un emprendedor existente.
+     * <p>
+     * Este proceso cifra la contraseña y genera el par de tokens (Access y Refresh) 
+     * iniciales para el usuario.
+     * </p>
+     * @param request Datos del registro.
+     * @return {@link AuthenticationResponse} con los tokens generados.
+     */
     public AuthenticationResponse register(RegisterRequest request) {
         var rol = rolRepository.findById(request.getRolId())
                 .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
         var emprendedor = emprendedorRepository.findById(request.getEmprendedorId())
                 .orElseThrow(() -> new RuntimeException("Emprendedor no encontrado"));
 
-        // Asegúrate de que User.java use @SuperBuilder
         var user = User.builder()
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -62,6 +73,13 @@ public class AuthenticationService {
                 .build();
     }
 
+    /**
+     * Autentica a un usuario y gestiona la rotación de sus tokens.
+     * <p>
+     * Al autenticar, se revocan todos los tokens previos del usuario para asegurar 
+     * que solo la sesión actual permanezca activa (opcional según política de seguridad).
+     * </p>
+     */
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
@@ -80,6 +98,9 @@ public class AuthenticationService {
                 .build();
     }
 
+    /**
+     * Persiste un token en la base de datos vinculado al usuario.
+     */
     private void saveUserToken(User user, String jwtToken) {
         var token = Token.builder()
                 .user(user)
@@ -91,8 +112,10 @@ public class AuthenticationService {
         tokenRepository.save(token);
     }
 
+    /**
+     * Invalida lógicamente todos los tokens activos de un usuario.
+     */
     private void revokeAllUserTokens(User user) {
-        // Asegúrate de que en TokenRepository el método se llame así
         var validUserTokens = tokenRepository.findAllValidTokenByUser(user.getId());
         if (validUserTokens.isEmpty()) return;
 
@@ -103,6 +126,13 @@ public class AuthenticationService {
         tokenRepository.saveAll(validUserTokens);
     }
 
+    /**
+     * Recupera el perfil del usuario autenticado actual.
+     * <p>
+     * Mapea la información de la entidad {@link User} y su relación con {@link Emprendedor} 
+     * a un DTO de respuesta seguro.
+     * </p>
+     */
     @Transactional(readOnly = true)
     public UserResponseDTO getCurrentUserResponse(String username) {
         var user = repository.findByUsername(username)
@@ -118,9 +148,7 @@ public class AuthenticationService {
             empDto.setEmail(emp.getEmail());
             empDto.setRubro(emp.getRubro());
             empDto.setPais(emp.getPais());
-
             empDto.setFotoPerfil(emp.getFotoPerfil());
-            // Agregamos las fechas para que no salgan null en el DTO
             empDto.setCreadoEn(emp.getCreadoEn());
             empDto.setActualizadoEn(emp.getActualizadoEn());
         }
@@ -128,7 +156,7 @@ public class AuthenticationService {
         return UserResponseDTO.builder()
                 .id(user.getId())
                 .nombre(user.getUsername())
-                .email(user.getEmprendedor().getEmail()) // <-- CAMBIO: Asegúrate de usar user.getEmail() no username
+                .email(user.getEmprendedor().getEmail())
                 .rol(user.getRol().getNombre())
                 .emprendedor(empDto)
                 .build();

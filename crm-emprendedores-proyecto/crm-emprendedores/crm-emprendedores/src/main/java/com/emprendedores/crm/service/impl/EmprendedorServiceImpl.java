@@ -10,7 +10,6 @@ import com.emprendedores.crm.repository.RolRepository;
 import com.emprendedores.crm.repository.UserRepository;
 import com.emprendedores.crm.service.EmprendedorService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,14 +25,19 @@ import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static org.springframework.http.HttpStatus.NOT_FOUND;
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
-
-// *Simulación de Mapper y StorageService*
-// Asumimos que existen clases de utilidad para el mapeo y manejo de archivos.
-
+/**
+ * Implementación del servicio para la gestión integral de emprendedores.
+ * <p>
+ * Esta clase maneja el flujo de registro de nuevos usuarios, la persistencia de perfiles
+ * y el almacenamiento de recursos multimedia (fotos de perfil). Implementa una lógica
+ * de negocio de doble persistencia: crea el perfil del emprendedor y, simultáneamente,
+ * genera el usuario de acceso con contraseñas encriptadas.
+ * </p>
+ * @author Facundo Alfaro
+ * @version 1.0
+ */
 @Service
-@RequiredArgsConstructor // Genera el constructor con los campos 'final' automáticamente
+@RequiredArgsConstructor
 public class EmprendedorServiceImpl implements EmprendedorService {
 
     private final EmprendedorRepository emprendedorRepository;
@@ -41,31 +45,44 @@ public class EmprendedorServiceImpl implements EmprendedorService {
     private final RolRepository rolRepository;
     private final PasswordEncoder passwordEncoder;
 
+    /**
+     * Ruta del directorio donde se almacenan físicamente las fotos de perfil.
+     */
     private final String UPLOAD_DIR = "uploads/emprendedores/";
 
+    /**
+     * Registra un nuevo emprendedor y su cuenta de acceso al sistema.
+     * <p>
+     * El proceso incluye:
+     * 1. Validación de email único.
+     * 2. Almacenamiento de foto de perfil en disco.
+     * 3. Creación de la entidad Emprendedor.
+     * 4. Creación de la entidad User vinculada con el rol "EMPRENDEDOR".
+     * </p>
+     * @param dto Datos del perfil y credenciales iniciales.
+     * @param fotoPerfil Archivo de imagen para el perfil.
+     * @return DTO del emprendedor creado.
+     * @throws ResponseStatusException si el email ya existe (BAD_REQUEST) o el rol no está configurado (INTERNAL_SERVER_ERROR).
+     */
     @Override
     @Transactional
     public EmprendedorResponseDTO create(EmprendedorCreateUpdateDTO dto, MultipartFile fotoPerfil) {
-        // 1. Validar si el email ya existe
         if (emprendedorRepository.existsByEmail(dto.getEmail())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ya existe un emprendedor con este email.");
         }
 
-        // 2. Crear y guardar la entidad Emprendedor
         Emprendedor emprendedor = toEmprendedorEntity(dto);
         if (fotoPerfil != null && !fotoPerfil.isEmpty()) {
             emprendedor.setFotoPerfil(savePhoto(fotoPerfil));
         }
         Emprendedor savedEmprendedor = emprendedorRepository.save(emprendedor);
 
-        // 3. Buscar el Rol EMPRENDEDOR
         Rol rol = rolRepository.findByNombre("EMPRENDEDOR")
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "El rol EMPRENDEDOR no existe en la base de datos."));
 
-        // 4. Crear el Usuario de acceso vinculado
         User user = User.builder()
-                .username(dto.getEmail()) // Su email será su usuario de login
-                .password(passwordEncoder.encode(dto.getPassword())) // Encriptar contraseña
+                .username(dto.getEmail())
+                .password(passwordEncoder.encode(dto.getPassword()))
                 .emprendedor(savedEmprendedor)
                 .rol(rol)
                 .build();
@@ -75,6 +92,13 @@ public class EmprendedorServiceImpl implements EmprendedorService {
         return toEmprendedorResponseDTO(savedEmprendedor);
     }
 
+    /**
+     * Actualiza la información del perfil del emprendedor.
+     * @param id Identificador único del emprendedor.
+     * @param dto Datos actualizados.
+     * @param fotoPerfil Nueva foto de perfil (reemplaza la anterior si se provee).
+     * @return DTO con la información actualizada.
+     */
     @Override
     @Transactional
     public EmprendedorResponseDTO update(Long id, EmprendedorCreateUpdateDTO dto, MultipartFile fotoPerfil) {
@@ -84,13 +108,17 @@ public class EmprendedorServiceImpl implements EmprendedorService {
         updateEmprendedorEntity(emprendedor, dto);
 
         if (fotoPerfil != null && !fotoPerfil.isEmpty()) {
-            // Opcional: Borrar foto anterior aquí antes de asignar la nueva
             emprendedor.setFotoPerfil(savePhoto(fotoPerfil));
         }
 
         return toEmprendedorResponseDTO(emprendedorRepository.save(emprendedor));
     }
 
+    /**
+     * Busca un emprendedor por su ID.
+     * @param id Identificador único.
+     * @return DTO de respuesta.
+     */
     @Override
     @Transactional(readOnly = true)
     public EmprendedorResponseDTO findById(Long id) {
@@ -99,6 +127,10 @@ public class EmprendedorServiceImpl implements EmprendedorService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No existe el emprendedor"));
     }
 
+    /**
+     * Obtiene todos los emprendedores registrados en la plataforma.
+     * @return Lista de DTOs de emprendedores.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<EmprendedorResponseDTO> findAll() {
@@ -107,17 +139,40 @@ public class EmprendedorServiceImpl implements EmprendedorService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Elimina el registro de un emprendedor.
+     * <p>Nota: La eliminación del usuario vinculado depende de la configuración de cascada en la entidad.</p>
+     * @param id ID del emprendedor a eliminar.
+     */
     @Override
     @Transactional
     public void delete(Long id) {
         Emprendedor emp = emprendedorRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No encontrado"));
 
-        // Al borrar el emprendedor, se borrarán sus usuarios si pusiste CascadeType.ALL
         emprendedorRepository.delete(emp);
     }
 
-    // --- Mapeos y Utilidades ---
+    /**
+     * Guarda físicamente la foto en el servidor y genera un nombre de archivo único.
+     * @param file Archivo recibido del cliente.
+     * @return Nombre del archivo generado.
+     */
+    private String savePhoto(MultipartFile file) {
+        try {
+            Path uploadPath = Paths.get(UPLOAD_DIR);
+            if (!Files.exists(uploadPath)) Files.createDirectories(uploadPath);
+
+            String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
+            Path filePath = uploadPath.resolve(fileName);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+            return fileName;
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al guardar foto");
+        }
+    }
+
+    // --- Métodos de Mapeo Interno ---
 
     private Emprendedor toEmprendedorEntity(EmprendedorCreateUpdateDTO dto) {
         return Emprendedor.builder()
@@ -154,19 +209,5 @@ public class EmprendedorServiceImpl implements EmprendedorService {
         dto.setCreadoEn(entity.getCreadoEn());
         dto.setActualizadoEn(entity.getActualizadoEn());
         return dto;
-    }
-
-    private String savePhoto(MultipartFile file) {
-        try {
-            Path uploadPath = Paths.get(UPLOAD_DIR);
-            if (!Files.exists(uploadPath)) Files.createDirectories(uploadPath);
-
-            String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
-            Path filePath = uploadPath.resolve(fileName);
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-            return fileName;
-        } catch (IOException e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al guardar foto");
-        }
     }
 }

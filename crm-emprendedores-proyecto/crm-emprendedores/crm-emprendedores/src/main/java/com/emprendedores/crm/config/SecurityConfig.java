@@ -29,7 +29,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity; // IMPORTANTE
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -44,9 +44,16 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+/**
+ * Configuración maestra de seguridad para la API REST.
+ * <p>
+ * Define la cadena de filtros de seguridad, las reglas de autorización por URL,
+ * el manejo de sesiones stateless y la política de intercambio de recursos (CORS).
+ * </p>
+ */
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // Permite usar @PreAuthorize("hasRole('ADMIN')") en los Controllers
+@EnableMethodSecurity // Activa el uso de @PreAuthorize en los controladores
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -58,17 +65,20 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(AbstractHttpConfigurer::disable) // Deshabilitado por ser una API JWT
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST, "/api/v1/emprendedores").permitAll() // SOLO el registro es público
+                        // Permitir registro público de emprendedores
+                        .requestMatchers(HttpMethod.POST, "/api/v1/emprendedores").permitAll()
+                        // Rutas públicas de autenticación y documentación
                         .requestMatchers(
                                 "/api/v1/auth/authenticate",
                                 "/error",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/uploads/**" // Permitir ver fotos
+                                "/uploads/**" 
                         ).permitAll()
+                        // El resto requiere un token válido
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -87,12 +97,19 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Configura la política CORS para permitir peticiones desde dominios específicos
+     * del frontend (Localhost y Vercel).
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5173", "https://emprende-liart.vercel.app"));
+        configuration.setAllowedOrigins(List.of(
+            "http://localhost:3000", 
+            "http://localhost:5173", 
+            "https://emprende-liart.vercel.app"
+        ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        // Importante incluir todos los headers que React enviará
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept"));
         configuration.setAllowCredentials(true);
 

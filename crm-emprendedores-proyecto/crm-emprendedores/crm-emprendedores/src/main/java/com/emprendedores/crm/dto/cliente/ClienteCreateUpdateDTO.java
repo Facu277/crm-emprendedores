@@ -22,7 +22,6 @@ public class ClienteCreateUpdateDTO {
 
     private String etiqueta;
 
-    // CORRECCIÓN: Eliminamos @NotNull.
-    // Ahora el ID se obtiene del Token en el Controller/Service.
+    
     private Long emprendedorId;
 }

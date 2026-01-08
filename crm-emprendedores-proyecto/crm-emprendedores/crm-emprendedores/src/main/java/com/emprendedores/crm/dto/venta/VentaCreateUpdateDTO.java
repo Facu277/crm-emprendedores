@@ -20,7 +20,7 @@ public class VentaCreateUpdateDTO {
     @NotBlank(message = "El estado de la venta es obligatorio")
     private String estado;
 
-    // Opcional: Puedes quitar el @NotNull si quieres que el servidor
+    // Opcional: Quitar el @NotNull para que que el servidor
     // asigne la fecha actual automáticamente si viene nula.
     @JsonFormat(shape=JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss[.SSS][.SS][.S]")
     private LocalDateTime fecha;
@@ -30,11 +30,11 @@ public class VentaCreateUpdateDTO {
 
     private String descripcion;
 
-    // Este SÍ es obligatorio: Necesitamos saber a qué cliente le vendes.
+    
     @NotNull(message = "El ID del cliente es obligatorio")
     private Long clienteId;
 
-    // CORRECCIÓN: Quitamos @NotNull.
+    
     // Lo obtenemos del Token en el Controller.
     private Long emprendedorId;
 }

@@ -11,7 +11,7 @@
     @Getter @Setter
     @NoArgsConstructor
     @AllArgsConstructor
-    @Builder // Útil para el mapeo manual que estamos haciendo en el Service
+    @Builder 
     public class VentaResponseDTO {
         private Long id;
         private BigDecimal monto;

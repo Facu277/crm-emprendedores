@@ -10,6 +10,6 @@ public class CategoriaContenidoCreateUpdateDTO {
     @NotBlank(message = "El nombre de la categoría es obligatorio")
     private String nombre;
 
-    // Quitamos @NotNull porque se obtiene del Token
+    
     private Long emprendedorId;
 }

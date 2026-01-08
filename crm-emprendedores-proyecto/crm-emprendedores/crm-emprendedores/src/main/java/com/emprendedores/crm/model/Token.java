@@ -6,6 +6,16 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Entidad que representa los tokens de acceso y seguridad para los usuarios del sistema.
+ * <p>
+ * Se utiliza principalmente para gestionar la autenticación JWT (JSON Web Token), 
+ * permitiendo el control sobre sesiones activas, revocación de acceso y expiración
+ * de credenciales temporales.
+ * </p>
+ * * @author CRM Team
+ * @version 1.0
+ */
 @Data
 @Builder
 @NoArgsConstructor
@@ -14,25 +24,47 @@ import lombok.NoArgsConstructor;
 @Table(name = "tokens")
 public class Token {
 
+    /**
+     * Identificador único del registro de token en la base de datos.
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;
 
+    /**
+     * Cadena de texto que contiene el valor real del token (JWT).
+     * Debe ser única y no nula para garantizar la integridad de la sesión.
+     */
     @Column(unique = true, nullable = false)
     public String token;
 
+    /**
+     * Tipo de token utilizado. 
+     * Por defecto se establece como {@link TokenType#BEARER}.
+     * La anotación @Builder.Default asegura que el valor inicial se mantenga al usar el patrón Builder.
+     */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    // ESTA ES LA CORRECCIÓN PARA EL ERROR DE BUILDER:
     @Builder.Default
     private TokenType tokenType = TokenType.BEARER;
 
-    // Si es true, el token ya no sirve (logout o revocación administrativa)
+    /**
+     * Indica si el token ha sido revocado manualmente.
+     * Útil para procesos de Logout o invalidación administrativa de sesiones.
+     */
     public boolean revoked;
 
-    // Si es true, el tiempo de vida expiró (útil para jobs de limpieza de BD)
+    /**
+     * Indica si el token ha superado su tiempo de vida útil.
+     * Se utiliza para filtros de seguridad y tareas programadas de limpieza de base de datos.
+     */
     public boolean expired;
 
+    /**
+     * Usuario al que pertenece este token.
+     * Relación muchos a uno con carga perezosa (LAZY) para evitar la sobrecarga 
+     * de datos al validar el token.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;

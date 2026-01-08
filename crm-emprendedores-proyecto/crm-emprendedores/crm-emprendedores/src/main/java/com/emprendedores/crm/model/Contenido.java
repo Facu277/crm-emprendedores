@@ -6,6 +6,16 @@ import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 
+/**
+ * Entidad que representa el material o publicaciones (contenidos) creados por un emprendedor.
+ * <p>
+ * Esta clase hereda de {@link BaseEntity} para el seguimiento de auditoría. Permite gestionar
+ * la descripción, el estado, archivos multimedia y la programación de publicaciones, 
+ * vinculándolas a un propietario y una categoría específica.
+ * </p>
+ * * @author Facundo Alfaro
+ * @version 1.0
+ */
 @Entity
 @Table(name = "contenidos")
 @Getter @Setter
@@ -13,27 +23,54 @@ import java.time.LocalDateTime;
 @SuperBuilder
 public class Contenido extends BaseEntity {
 
+    /**
+     * Identificador único del contenido.
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * Título o encabezado del contenido.
+     */
     private String titulo;
 
-    @Lob // Para texto largo
+    /**
+     * Descripción detallada del contenido.
+     * Se utiliza la anotación @Lob para permitir el almacenamiento de textos de gran extensión.
+     */
+    @Lob 
     private String descripcion;
 
+    /**
+     * Estado actual del contenido (ej. "Borrador", "Publicado", "Programado").
+     */
     private String estado;
+
+    /**
+     * Ruta o URL de la imagen asociada al contenido.
+     */
     private String imagen;
+
+    /**
+     * Fecha y hora prevista para la publicación del contenido.
+     */
     private LocalDateTime fechaProgramada;
 
-    // 1. Relación Many-to-One con Emprendedor (Propiedad)
+    /**
+     * Emprendedor responsable o propietario de este contenido.
+     * Relación muchos a uno con carga perezosa (LAZY).
+     */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "emprendedor_id", nullable = false) // FK: emprendedorId
+    @JoinColumn(name = "emprendedor_id", nullable = false)
     private Emprendedor emprendedor;
 
-    // 2. Relación Many-to-One con CategoriaContenido (Clasificación)
+    /**
+     * Categoría específica bajo la cual se clasifica este contenido.
+     * Relación muchos a uno con carga perezosa (LAZY) hacia {@link CategoriaContenido}.
+     */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "categoria_contenido_id", nullable = false) // FK: categoriaId (asumimos que es el ID de CategoriaContenido)
+    @JoinColumn(name = "categoria_contenido_id", nullable = false)
     private CategoriaContenido categoriaContenido;
 }
 

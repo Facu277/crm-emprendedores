@@ -10,7 +10,7 @@ import lombok.Builder;
 import java.time.LocalDateTime;
 
 @Getter @Setter
-@Builder // O SuperBuilder si heredas de algún lado
+@Builder 
 @NoArgsConstructor
 @AllArgsConstructor
 public class ClienteResponseDTO {

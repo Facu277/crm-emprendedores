@@ -27,12 +27,5 @@ public class EmprendedorResponseDTO {
     private LocalDateTime actualizadoEn;
 
     // --- Relaciones (Opcionales, generalmente se devuelven en endpoints dedicados) ---
-    // Si decides incluirlos, usarías los DTOs mínimos de las entidades relacionadas:
-
-    /*
-    private List<ClienteMinResponseDTO> clientes;
-    private List<ContenidoMinResponseDTO> contenidos;
-    private List<CategoriaContenidoMinResponseDTO> categoriasContenido;
-    // ... otros
-    */
+    
 }

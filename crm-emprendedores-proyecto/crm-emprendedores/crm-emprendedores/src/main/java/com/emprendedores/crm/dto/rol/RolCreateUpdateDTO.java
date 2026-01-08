@@ -8,5 +8,5 @@ import lombok.Setter;
 public class RolCreateUpdateDTO {
 
     @NotBlank(message = "El nombre del rol es obligatorio")
-    private String nombre; // Ej: ADMIN, USER
+    private String nombre;
 }

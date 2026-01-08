@@ -11,7 +11,6 @@ import com.emprendedores.crm.repository.EmprendedorRepository;
 import com.emprendedores.crm.repository.VentaRepository;
 import com.emprendedores.crm.service.VentaService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -23,6 +22,16 @@ import java.util.stream.Collectors;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
+/**
+ * Implementación del servicio para la gestión de transacciones comerciales (Ventas).
+ * <p>
+ * Gestiona el registro de ingresos y el historial de ventas por cliente, manteniendo
+ * el aislamiento multi-tenant. La clase asegura que los datos del cliente se adjunten
+ * correctamente a la respuesta para facilitar la visualización en el frontend.
+ * </p>
+ * @author Facundo Alfaro
+ * @version 1.0
+ */
 @Service
 @RequiredArgsConstructor
 public class VentaServiceImpl implements VentaService {
@@ -31,31 +40,42 @@ public class VentaServiceImpl implements VentaService {
     private final EmprendedorRepository emprendedorRepository;
     private final ClienteRepository clienteRepository;
 
+    /**
+     * Registra una nueva venta vinculada a un cliente y un emprendedor.
+     * <p>
+     * Se valida explícitamente que el cliente pertenezca al emprendedor que realiza la operación
+     * antes de persistir el registro.
+     * </p>
+     * @param dto Datos de la venta (monto, método de pago, etc.).
+     * @param emprendedorId ID del emprendedor autenticado.
+     * @return DTO de la venta con la información del cliente anidada.
+     * @throws ResponseStatusException si el cliente no pertenece al emprendedor (BAD_REQUEST).
+     */
     @Override
     @Transactional
     public VentaResponseDTO create(VentaCreateUpdateDTO dto, Long emprendedorId) {
-        // 1. Obtener Emprendedor
         Emprendedor emprendedor = emprendedorRepository.findById(emprendedorId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Emprendedor no encontrado."));
 
-        // 2. Obtener Cliente (Ya lo tienes aquí en memoria)
         Cliente cliente = clienteRepository.findByIdAndEmprendedorId(dto.getClienteId(), emprendedorId)
                 .orElseThrow(() -> new ResponseStatusException(BAD_REQUEST, "El cliente no existe o no pertenece a tu cuenta."));
 
-        // 3. Crear la entidad
         Venta venta = toVentaEntity(dto, emprendedor, cliente);
-
-        // 4. Guardar
         Venta ventaGuardada = ventaRepository.save(venta);
-
-        // --- EL CAMBIO CLAVE AQUÍ ---
-        // Le asignamos el objeto 'cliente' que ya tenemos cargado con nombre y apellido
-        // para que el mapeador pueda leer esos datos.
+        
+        // Se asegura que la relación esté cargada para el mapeo de respuesta
         ventaGuardada.setCliente(cliente);
 
         return toVentaResponseDTO(ventaGuardada);
     }
 
+    /**
+     * Actualiza los detalles de una venta existente.
+     * @param id Identificador de la venta.
+     * @param dto Datos actualizados.
+     * @param emprendedorId ID del dueño para validación de permisos.
+     * @return DTO con los cambios aplicados.
+     */
     @Override
     @Transactional
     public VentaResponseDTO update(Long id, VentaCreateUpdateDTO dto, Long emprendedorId) {
@@ -67,6 +87,12 @@ public class VentaServiceImpl implements VentaService {
         return toVentaResponseDTO(ventaRepository.save(venta));
     }
 
+    /**
+     * Recupera una venta por su ID, validando la propiedad de la misma.
+     * @param id ID de la venta.
+     * @param emprendedorId ID del dueño.
+     * @return DTO de la venta encontrada.
+     */
     @Override
     @Transactional(readOnly = true)
     public VentaResponseDTO findByIdAndEmprendedorId(Long id, Long emprendedorId) {
@@ -76,6 +102,11 @@ public class VentaServiceImpl implements VentaService {
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Venta no encontrada."));
     }
 
+    /**
+     * Obtiene el historial completo de ventas de un emprendedor.
+     * @param emprendedorId ID del dueño.
+     * @return Lista de ventas registradas.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<VentaResponseDTO> findAllByEmprendedorId(Long emprendedorId) {
@@ -84,6 +115,12 @@ public class VentaServiceImpl implements VentaService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Recupera todas las ventas asociadas a un cliente específico de un emprendedor.
+     * @param clienteId ID del cliente.
+     * @param emprendedorId ID del dueño.
+     * @return Lista de ventas del cliente.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<VentaResponseDTO> findAllByClienteIdAndEmprendedorId(Long clienteId, Long emprendedorId) {
@@ -92,6 +129,11 @@ public class VentaServiceImpl implements VentaService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Elimina el registro de una venta.
+     * @param id ID de la venta a borrar.
+     * @param emprendedorId ID para validar la propiedad.
+     */
     @Override
     @Transactional
     public void delete(Long id, Long emprendedorId) {
@@ -101,7 +143,8 @@ public class VentaServiceImpl implements VentaService {
         ventaRepository.delete(venta);
     }
 
-    // --- Mapeos ---
+    // --- Métodos de Mapeo Interno ---
+
     private Venta toVentaEntity(VentaCreateUpdateDTO dto, Emprendedor emp, Cliente cli) {
         return Venta.builder()
                 .monto(dto.getMonto())
@@ -119,7 +162,6 @@ public class VentaServiceImpl implements VentaService {
         entity.setEstado(dto.getEstado());
         entity.setMetodoPago(dto.getMetodoPago());
         entity.setDescripcion(dto.getDescripcion());
-        // AÑADE ESTA LÍNEA:
         entity.setFecha(dto.getFecha());
     }
 
@@ -133,7 +175,6 @@ public class VentaServiceImpl implements VentaService {
                 .descripcion(entity.getDescripcion())
                 .creadoEn(entity.getCreadoEn())
                 .actualizadoEn(entity.getActualizadoEn())
-                // Mapeamos el cliente de forma minimalista
                 .cliente(ClienteMinResponseDTO.builder()
                         .id(entity.getCliente().getId())
                         .nombre(entity.getCliente().getNombre())

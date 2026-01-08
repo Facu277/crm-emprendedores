@@ -15,12 +15,27 @@ import java.util.stream.Collectors;
 
 import static org.springframework.http.HttpStatus.*;
 
+/**
+ * Implementación del servicio para la gestión de categorías globales del sistema.
+ * <p>
+ * Proporciona la lógica de negocio para administrar las categorías generales 
+ * compartidas por todos los usuarios, incluyendo validaciones de unicidad de nombres.
+ * </p>
+ * @author Facundo Alfaro
+ * @version 1.0
+ */
 @Service
 @RequiredArgsConstructor
 public class CategoriaServiceImpl implements CategoriaService {
 
     private final CategoriaRepository categoriaRepository;
 
+    /**
+     * Crea una nueva categoría global verificando que el nombre no esté duplicado.
+     * @param dto Datos de la categoría a crear.
+     * @return DTO de la categoría persistida.
+     * @throws ResponseStatusException si el nombre ya existe (BAD_REQUEST).
+     */
     @Override
     @Transactional
     public CategoriaResponseDTO create(CategoriaCreateUpdateDTO dto) {
@@ -35,6 +50,13 @@ public class CategoriaServiceImpl implements CategoriaService {
         return toResponseDTO(categoriaRepository.save(categoria));
     }
 
+    /**
+     * Actualiza una categoría global existente.
+     * @param id ID de la categoría.
+     * @param dto Datos actualizados.
+     * @return DTO con la información actualizada.
+     * @throws ResponseStatusException si no existe el ID (NOT_FOUND) o el nombre nuevo está duplicado (BAD_REQUEST).
+     */
     @Override
     @Transactional
     public CategoriaResponseDTO update(Long id, CategoriaCreateUpdateDTO dto) {
@@ -50,6 +72,11 @@ public class CategoriaServiceImpl implements CategoriaService {
         return toResponseDTO(categoriaRepository.save(existente));
     }
 
+    /**
+     * Busca una categoría global por su identificador único.
+     * @param id Identificador de la categoría.
+     * @return DTO con los detalles encontrados.
+     */
     @Override
     @Transactional(readOnly = true)
     public CategoriaResponseDTO findById(Long id) {
@@ -58,6 +85,10 @@ public class CategoriaServiceImpl implements CategoriaService {
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Categoría no encontrada."));
     }
 
+    /**
+     * Recupera el listado completo de categorías globales.
+     * @return Lista de categorías disponibles en el sistema.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<CategoriaResponseDTO> findAll() {
@@ -66,6 +97,10 @@ public class CategoriaServiceImpl implements CategoriaService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Elimina una categoría global por su ID.
+     * @param id Identificador del registro a eliminar.
+     */
     @Override
     @Transactional
     public void delete(Long id) {
@@ -75,6 +110,9 @@ public class CategoriaServiceImpl implements CategoriaService {
         categoriaRepository.deleteById(id);
     }
 
+    /**
+     * Mapea una entidad Categoria a su DTO de respuesta.
+     */
     private CategoriaResponseDTO toResponseDTO(Categoria entity) {
         return CategoriaResponseDTO.builder()
                 .id(entity.getId())

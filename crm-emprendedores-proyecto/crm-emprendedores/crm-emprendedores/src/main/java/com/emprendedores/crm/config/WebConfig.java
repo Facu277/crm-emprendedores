@@ -8,10 +8,30 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
 
+/**
+ * Configuración de infraestructura Web MVC.
+ * <p>
+ * Gestiona la exposición de archivos estáticos (imágenes subidas) y extiende
+ * los convertidores de mensajes para soportar flujos de datos binarios en JSON.
+ * </p>
+ */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    // Mantienes tu configuración de convertidores (la que arregló el error de JSON)
+    /**
+     * Mapea URLs de tipo /uploads/** a la carpeta física 'uploads' en la raíz del proyecto.
+     */
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        String rootPath = System.getProperty("user.dir");
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations("file:" + rootPath + "/uploads/");
+    }
+
+    /**
+     * Amplía la compatibilidad de Jackson para procesar JSON dentro de peticiones
+     * multipart que lleguen como application/octet-stream.
+     */
     @Override
     public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
         converters.stream()
@@ -22,16 +42,5 @@ public class WebConfig implements WebMvcConfigurer {
                     types.add(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM);
                     c.setSupportedMediaTypes(types);
                 });
-    }
-
-    // AGREGAS ESTO para poder ver las imágenes desde el navegador
-    @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Usamos System.getProperty("user.dir") para que funcione en cualquier PC
-        // donde descargues el proyecto, siempre que la carpeta 'uploads' esté en la raíz.
-        String rootPath = System.getProperty("user.dir");
-
-        registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:" + rootPath + "/uploads/");
     }
 }

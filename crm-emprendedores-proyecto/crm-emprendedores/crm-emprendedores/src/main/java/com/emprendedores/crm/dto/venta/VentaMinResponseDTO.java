@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Getter @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder // Agrégalo para poder construirlo fácilmente en el Service o Mapper
+@Builder 
 public class VentaMinResponseDTO {
 
     private Long id;

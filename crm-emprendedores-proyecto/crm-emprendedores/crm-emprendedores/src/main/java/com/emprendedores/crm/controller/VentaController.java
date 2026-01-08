@@ -14,16 +14,32 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Controlador REST para la gestión de registros de ventas y transacciones comerciales.
+ * <p>
+ * Este controlador expone los endpoints necesarios para el seguimiento financiero de los 
+ * emprendedores. Implementa un modelo de aislamiento de datos donde cada usuario solo 
+ * puede interactuar con las ventas vinculadas a su propio perfil de emprendedor.
+ * </p>
+ * @author Facundo Alfaro
+ * @version 1.0
+ */
 @RestController
-@RequestMapping("/api/v1/ventas") // Agregamos v1 por consistencia
-@RequiredArgsConstructor // Reemplaza al constructor manual con Autowired
+@RequestMapping("/api/v1/ventas")
+@RequiredArgsConstructor
 public class VentaController {
 
     private final VentaService ventaService;
 
     /**
-     * Crea una nueva Venta.
-     * El ID del emprendedor se obtiene del Token (@AuthenticationPrincipal).
+     * Registra una nueva venta en el sistema.
+     * <p>
+     * El sistema asocia automáticamente la venta al emprendedor autenticado,
+     * garantizando la integridad de los datos financieros.
+     * </p>
+     * @param user Usuario autenticado (proporcionado por Spring Security).
+     * @param dto Datos de la transacción (monto, cliente, método de pago, etc.).
+     * @return ResponseEntity con la venta creada y estado 201 (CREATED).
      */
     @PostMapping
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'EMPRENDEDOR')")
@@ -36,7 +52,11 @@ public class VentaController {
     }
 
     /**
-     * Actualiza una Venta existente.
+     * Actualiza la información de una venta existente.
+     * @param id Identificador único de la venta.
+     * @param user Usuario autenticado para validar la propiedad del registro.
+     * @param dto Datos actualizados de la venta.
+     * @return Venta actualizada con estado 200 (OK).
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'EMPRENDEDOR')")
@@ -50,7 +70,10 @@ public class VentaController {
     }
 
     /**
-     * Obtiene una Venta por ID validando que sea del usuario autenticado.
+     * Recupera el detalle de una venta específica.
+     * @param id ID de la venta.
+     * @param user Usuario autenticado.
+     * @return DTO de la venta solicitada.
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'EMPRENDEDOR')")
@@ -63,7 +86,9 @@ public class VentaController {
     }
 
     /**
-     * Obtiene todas las Ventas del emprendedor logueado.
+     * Obtiene el historial completo de ventas del emprendedor logueado.
+     * @param user Usuario autenticado.
+     * @return Lista de todas las ventas del emprendedor.
      */
     @GetMapping
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'EMPRENDEDOR')")
@@ -73,7 +98,10 @@ public class VentaController {
     }
 
     /**
-     * Obtiene todas las Ventas de un cliente específico, validando propiedad.
+     * Recupera todas las ventas asociadas a un cliente en particular.
+     * @param clienteId ID del cliente a filtrar.
+     * @param user Usuario autenticado (para validar que el cliente le pertenezca).
+     * @return Lista de ventas realizadas al cliente especificado.
      */
     @GetMapping("/cliente/{clienteId}")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'EMPRENDEDOR')")
@@ -86,7 +114,10 @@ public class VentaController {
     }
 
     /**
-     * Elimina una Venta asegurando que pertenece al usuario.
+     * Elimina el registro de una venta asegurando la pertenencia del recurso.
+     * @param id ID de la venta a eliminar.
+     * @param user Usuario autenticado.
+     * @return Respuesta vacía con estado 204 (NO_CONTENT).
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'EMPRENDEDOR')")

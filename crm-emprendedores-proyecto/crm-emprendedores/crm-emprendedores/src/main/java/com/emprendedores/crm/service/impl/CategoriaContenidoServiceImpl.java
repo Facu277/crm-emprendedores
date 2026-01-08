@@ -3,24 +3,30 @@ package com.emprendedores.crm.service.impl;
 import com.emprendedores.crm.dto.categoriacontenido.CategoriaContenidoCreateUpdateDTO;
 import com.emprendedores.crm.dto.categoriacontenido.CategoriaContenidoResponseDTO;
 import com.emprendedores.crm.model.CategoriaContenido;
-import com.emprendedores.crm.model.Emprendedor;
+import com.emprendedores.crm.model.User;
 import com.emprendedores.crm.repository.CategoriaContenidoRepository;
 import com.emprendedores.crm.repository.ContenidoRepository;
-import com.emprendedores.crm.repository.EmprendedorRepository;
+import com.emprendedores.crm.repository.UserRepository;
 import com.emprendedores.crm.service.CategoriaContenidoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import com.emprendedores.crm.repository.UserRepository;
-import com.emprendedores.crm.model.User;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static org.springframework.http.HttpStatus.*;
-
+/**
+ * Implementación del servicio para la gestión de categorías de contenido personalizadas.
+ * <p>
+ * Esta clase centraliza la lógica de negocio para que cada emprendedor pueda organizar
+ * su contenido de manera aislada, implementando validaciones de seguridad y 
+ * restricciones de integridad referencial.
+ * </p>
+ * @author Facundo Alfaro
+ * @version 1.0
+ */
 @Service
 @RequiredArgsConstructor
 public class CategoriaContenidoServiceImpl implements CategoriaContenidoService {
@@ -29,6 +35,13 @@ public class CategoriaContenidoServiceImpl implements CategoriaContenidoService 
     private final UserRepository userRepository;
     private final ContenidoRepository contenidoRepository;
 
+    /**
+     * Crea una categoría validando que el nombre no esté duplicado para el mismo emprendedor.
+     * @param dto Datos de la categoría.
+     * @param username Usuario que realiza la acción.
+     * @return DTO de la categoría creada.
+     * @throws ResponseStatusException si el nombre ya existe (BAD_REQUEST).
+     */
     @Override
     @Transactional
     public CategoriaContenidoResponseDTO create(CategoriaContenidoCreateUpdateDTO dto, String username) {
@@ -47,6 +60,13 @@ public class CategoriaContenidoServiceImpl implements CategoriaContenidoService 
         return toResponseDTO(repository.save(categoria));
     }
 
+    /**
+     * Actualiza una categoría existente verificando primero la propiedad del recurso.
+     * @param id ID de la categoría.
+     * @param dto Nuevos datos.
+     * @param username Usuario para validación de propiedad.
+     * @return DTO actualizado.
+     */
     @Override
     @Transactional
     public CategoriaContenidoResponseDTO update(Long id, CategoriaContenidoCreateUpdateDTO dto, String username) {
@@ -64,6 +84,11 @@ public class CategoriaContenidoServiceImpl implements CategoriaContenidoService 
         return toResponseDTO(repository.save(existente));
     }
 
+    /**
+     * Lista todas las categorías asociadas al emprendedor del usuario actual.
+     * @param username Identificador del usuario.
+     * @return Lista de categorías filtradas.
+     */
     @Override
     @Transactional(readOnly = true)
     public List<CategoriaContenidoResponseDTO> findAllByUsername(String username) {
@@ -73,6 +98,12 @@ public class CategoriaContenidoServiceImpl implements CategoriaContenidoService 
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Recupera una categoría por ID asegurando que pertenezca al usuario solicitante.
+     * @param id ID de la categoría.
+     * @param username Identificador del usuario.
+     * @return DTO de la categoría.
+     */
     @Override
     @Transactional(readOnly = true)
     public CategoriaContenidoResponseDTO findByIdAndUsername(Long id, String username) {
@@ -83,17 +114,19 @@ public class CategoriaContenidoServiceImpl implements CategoriaContenidoService 
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría no encontrada"));
     }
 
+    /**
+     * Elimina una categoría siempre que no tenga contenidos asociados.
+     * @param id ID de la categoría.
+     * @param username Usuario que solicita la eliminación.
+     * @throws ResponseStatusException si existen contenidos vinculados (BAD_REQUEST).
+     */
     @Override
     @Transactional
     public void delete(Long id, String username) {
         var user = obtenerUsuario(username);
-
-        // 1. Verificar que la categoría le pertenezca
         var cat = repository.findById(id)
                 .filter(c -> c.getEmprendedor().getId().equals(user.getEmprendedor().getId()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Categoría no encontrada"));
-
-        // 2. Verificar si tiene contenidos asociados (Opción Recomendada)
 
         long cantidadContenidos = contenidoRepository.countByCategoriaContenidoId(id);
         if (cantidadContenidos > 0) {
@@ -104,11 +137,17 @@ public class CategoriaContenidoServiceImpl implements CategoriaContenidoService 
         repository.delete(cat);
     }
 
+    /**
+     * Método auxiliar para recuperar el usuario de la base de datos.
+     */
     private User obtenerUsuario(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
     }
 
+    /**
+     * Convierte la entidad en un DTO de respuesta.
+     */
     private CategoriaContenidoResponseDTO toResponseDTO(CategoriaContenido entity) {
         return CategoriaContenidoResponseDTO.builder()
                 .id(entity.getId())

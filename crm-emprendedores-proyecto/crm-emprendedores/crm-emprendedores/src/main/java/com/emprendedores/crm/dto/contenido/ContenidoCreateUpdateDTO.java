@@ -9,7 +9,7 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 
-// ContenidoCreateUpdateDTO.java
+
 @Getter @Setter
 public class ContenidoCreateUpdateDTO {
     @NotBlank(message = "El título del contenido es obligatorio")
